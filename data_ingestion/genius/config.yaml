@@ -1,0 +1,26 @@
+# Genius Lyrics Scraper Configuration
+
+# Genius API token - set as environment variable GENIUS_ACCESS_TOKEN
+# or uncomment and add here (not recommended for version control)
+# api_token: "your_token_here"
+
+# Artists to scrape
+# For now: simple list of artist names
+# Future: will support CSV with (artist, album, song) tuples
+artists:
+  - "Fontaines DC"
+  - "IDLES"
+  - "Fugazi"
+  - "Tom Waits"
+
+# Scraping parameters
+max_songs_per_artist: 20  # Set to null for all songs
+skip_non_songs: true       # Skip non-song results (compilations, etc.)
+remove_section_headers: false  # Keep [Chorus], [Verse], etc. for now
+
+# Rate limiting
+sleep_time: 0.5  # Seconds between requests (be polite!)
+
+# Output
+output_dir: "../../data/raw/genius"
+save_format: "json"  # json or jsonl

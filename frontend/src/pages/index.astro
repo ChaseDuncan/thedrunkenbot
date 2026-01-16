@@ -1,0 +1,340 @@
+---
+// No server-side logic needed
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Drunken Bot - Lyric Autocomplete</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #e0e0e0;
+    }
+
+    .container {
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 700px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    h1 {
+      color: #ffffff;
+      margin-bottom: 8px;
+      font-size: 2em;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      color: #999;
+      margin-bottom: 30px;
+      font-size: 0.95em;
+    }
+
+    .editor-container {
+      position: relative;
+      border: 1px solid #3a3a3a;
+      border-radius: 8px;
+      background: #1e1e1e;
+      transition: border-color 0.2s;
+      min-height: 250px;
+    }
+
+    .editor-container:focus-within {
+      border-color: #555;
+    }
+
+    .editor-wrapper {
+      position: relative;
+      padding: 16px;
+      min-height: 250px;
+    }
+
+    #lyricEditor {
+      width: 100%;
+      min-height: 250px;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      line-height: 1.6;
+      resize: none;
+      position: relative;
+      z-index: 2;
+      background: transparent;
+      color: #e0e0e0;
+    }
+
+    #lyricEditor::placeholder {
+      color: #666;
+    }
+
+    #suggestion {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      font-size: 15px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      line-height: 1.6;
+      color: #555;
+      pointer-events: none;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      z-index: 1;
+    }
+
+    .controls {
+      margin-top: 16px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hint {
+      flex: 1;
+      min-width: 200px;
+      padding: 12px 16px;
+      background: #252525;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #999;
+    }
+
+    .hint kbd {
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: inherit;
+      font-size: 12px;
+      color: #ccc;
+    }
+
+    .status {
+      padding: 12px 16px;
+      background: #252525;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #999;
+      min-width: 200px;
+      text-align: center;
+    }
+
+    .status.loading {
+      color: #7c9ff5;
+      border-color: #3a4a6a;
+    }
+
+    .status.error {
+      color: #ff6b6b;
+      border-color: #6a3a3a;
+    }
+
+    .status.success {
+      color: #69db7c;
+      border-color: #3a5a3a;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status.loading::after {
+      content: '...';
+      animation: pulse 1.5s infinite;
+    }
+
+    /* Scrollbar styling */
+    #lyricEditor::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #lyricEditor::-webkit-scrollbar-track {
+      background: #1e1e1e;
+    }
+
+    #lyricEditor::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 4px;
+    }
+
+    #lyricEditor::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>The Drunken Bot</h1>
+    <p class="subtitle">AI-powered lyric autocomplete for songwriters</p>
+
+    <div class="editor-container">
+      <div class="editor-wrapper">
+        <div id="suggestion"></div>
+        <textarea 
+          id="lyricEditor" 
+          placeholder="Start writing your lyrics..."
+          spellcheck="false"></textarea>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="hint">
+        <kbd>Tab</kbd> or <kbd>→</kbd> accept • <kbd>Shift+Tab</kbd> new suggestion • <kbd>Esc</kbd> dismiss
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <script>
+    const editor = document.getElementById('lyricEditor') as HTMLTextAreaElement;
+    const suggestionEl = document.getElementById('suggestion') as HTMLDivElement;
+    const statusEl = document.getElementById('status') as HTMLDivElement;
+
+    let debounceTimer: number | null = null;
+    let currentSuggestion = '';
+    let isLoading = false;
+
+    // Debounced autocomplete trigger
+    editor.addEventListener('input', () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+
+      clearSuggestion();
+
+      const text = editor.value.trim();
+      
+      if (text.length < 10) {
+        return;
+      }
+
+      setStatus('Waiting...', 'loading');
+
+      debounceTimer = setTimeout(async () => {
+        await fetchSuggestion(text);
+      }, 500);
+    });
+
+    async function fetchSuggestion(partialLyric: string) {
+      if (isLoading) return;
+      
+      isLoading = true;
+      setStatus('Thinking...', 'loading');
+
+      try {
+        const response = await fetch('/api/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ partialLyric }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to get suggestion');
+        }
+
+        currentSuggestion = data.completion;
+        displaySuggestion();
+        setStatus('');
+
+      } catch (err) {
+        console.error('Autocomplete error:', err);
+        setStatus(err instanceof Error ? err.message : 'Error', 'error');
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    function displaySuggestion() {
+      if (!currentSuggestion) return;
+
+      const currentText = editor.value;
+      suggestionEl.textContent = currentText + currentSuggestion;
+    }
+
+    function clearSuggestion() {
+      currentSuggestion = '';
+      suggestionEl.textContent = '';
+    }
+
+    function acceptSuggestion() {
+      if (!currentSuggestion) return;
+      
+      editor.value += currentSuggestion;
+      clearSuggestion();
+      setStatus('Accepted', 'success');
+      setTimeout(() => setStatus(''), 1500);
+      
+      editor.focus();
+      editor.setSelectionRange(editor.value.length, editor.value.length);
+    }
+
+    async function requestNewSuggestion() {
+      const text = editor.value.trim();
+      if (text.length < 10) {
+        setStatus('Need more text', 'error');
+        setTimeout(() => setStatus(''), 2000);
+        return;
+      }
+      
+      clearSuggestion();
+      await fetchSuggestion(text);
+    }
+
+    function setStatus(message: string, type: 'loading' | 'error' | 'success' | '' = '') {
+      statusEl.textContent = message;
+      statusEl.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    editor.addEventListener('keydown', (e) => {
+      // Shift+Tab for new suggestion
+      if (e.key === 'Tab' && e.shiftKey) {
+        e.preventDefault();
+        requestNewSuggestion();
+        return;
+      }
+
+      // Tab or Right Arrow to accept suggestion
+      if ((e.key === 'Tab' || e.key === 'ArrowRight') && currentSuggestion) {
+        e.preventDefault();
+        acceptSuggestion();
+        return;
+      }
+
+      // Escape to dismiss suggestion
+      if (e.key === 'Escape') {
+        clearSuggestion();
+        setStatus('');
+      }
+    });
+
+    // Clear suggestion if user moves cursor
+    editor.addEventListener('click', () => {
+      clearSuggestion();
+    });
+  </script>
+</body>
+</html>

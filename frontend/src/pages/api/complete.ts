@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { completeLyric } from '../../lib/llm-client';
 
 export const POST: APIRoute = async ({ request }) => {
+  console.log('API endpoint called!');
   try {
     const { partialLyric } = await request.json();
 

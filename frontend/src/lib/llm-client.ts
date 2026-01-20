@@ -1,5 +1,9 @@
 import OpenAI from 'openai';
 
+console.log('Provider:', import.meta.env.LLM_PROVIDER);
+console.log('Base URL:', import.meta.env.VLLM_BASE_URL);
+console.log('Model:', import.meta.env.VLLM_MODEL);
+
 const provider = import.meta.env.LLM_PROVIDER || 'vllm';
 
 // vLLM server is OpenAI-compatible, so we use the OpenAI SDK

@@ -4,16 +4,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import logging
 
-from app.core.config import get_settings
-from app.core.text_utils import clean_completion
-from app.services.vllm_client import vllm_client
-
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) 
+logger.setLevel(logging.DEBUG)
+
+from app.core.config import get_settings
+from app.core.text_utils import clean_completion
+from app.services.vllm_client import vllm_client
+
+from app.services.rag.retriever import Retriever
+from app.services.rag.utils import embedder
+import chromadb
+
+client = chromadb.PersistentClient(path="./chroma")
+collection = client.get_collection("lyric_chunks")
+retriever = Retriever(collection, embedder)
 
 settings = get_settings()
 
@@ -86,13 +94,18 @@ async def complete_lyrics(request: CompletionRequest):
     
     Returns a CompletionResponse with both cleaned and raw completions.
     """
+    print("=== ENDPOINT HIT ===", flush=True)
     try:
-        logger.info(f"Completion request: '{request.text[:50]}...' "
+        logger.warning(f"Completion request: '{request.text[:50]}...' "
                    f"(max_tokens={request.max_tokens}, temp={request.temperature})")
         
+        chunks = retriever.retrieve(request.text, threshold=0.7, top_k=10)
+        chunk_texts = ' '.join([chunk.text for chunk in chunks])
+        prompt = f"{chunk_texts} {request.text}"
+        print(prompt)
         # Call vLLM service
         raw_completion = await vllm_client.generate_completion(
-            prompt=request.text,
+            prompt=prompt,
             max_tokens=request.max_tokens,
             temperature=request.temperature
         )
@@ -120,5 +133,7 @@ if __name__ == "__main__":
         "app.main:app",
         host=settings.host,
         port=settings.port,
-        reload=settings.debug
+        reload=False,
+        log_level="debug",
+        log_config=None
     )

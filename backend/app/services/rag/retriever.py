@@ -17,7 +17,7 @@ class Retriever:
         self.collection = collection
         self.embedder = embedder
     
-    def retrieve(self, query: str, threshold: Optional[float], top_k: int = 5)->List[RetrievedChunk]:
+    def retrieve(self, query: str, threshold: float | None = None, top_k: int = 5)->List[RetrievedChunk]:
         """
         Retrieves the top_k results filtered by an optional similarity threshold
         

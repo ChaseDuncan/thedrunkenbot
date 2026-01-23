@@ -27,8 +27,8 @@ class VLLMClient:
     async def generate_completion(
             self,
             prompt: str,
-            max_tokens: int = 20,
-            temperature: float = 0.7,
+            max_tokens: int = 10,
+            temperature: float = 1.0,
             top_p: float = 0.95,
     ) -> str:
         """

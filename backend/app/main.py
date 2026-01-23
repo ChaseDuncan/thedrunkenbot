@@ -94,15 +94,14 @@ async def complete_lyrics(request: CompletionRequest):
     
     Returns a CompletionResponse with both cleaned and raw completions.
     """
-    print("=== ENDPOINT HIT ===", flush=True)
     try:
-        logger.warning(f"Completion request: '{request.text[:50]}...' "
+        logger.info(f"Completion request: '{request.text[:50]}...' "
                    f"(max_tokens={request.max_tokens}, temp={request.temperature})")
         
-        chunks = retriever.retrieve(request.text, threshold=0.7, top_k=10)
+        chunks = retriever.retrieve(request.text, top_k=10)
         chunk_texts = ' '.join([chunk.text for chunk in chunks])
         prompt = f"{chunk_texts} {request.text}"
-        print(prompt)
+        logger.info(f"Prompt after RAG: \n{prompt}")
         # Call vLLM service
         raw_completion = await vllm_client.generate_completion(
             prompt=prompt,

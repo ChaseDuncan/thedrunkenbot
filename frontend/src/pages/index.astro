@@ -107,7 +107,27 @@
       gap: 12px;
       flex-wrap: wrap;
     }
+  .rag-toggle {
+    padding: 12px 20px;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    color: #999;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
 
+  .rag-toggle:hover {
+    border-color: #555;
+    color: #ccc;
+  }
+
+  .rag-toggle.active {
+    background: #3a4a6a;
+    border-color: #7c9ff5;
+    color: #7c9ff5;
+  }
     .hint {
       flex: 1;
       min-width: 200px;
@@ -203,6 +223,7 @@
       <div class="hint">
         <kbd>Tab</kbd> or <kbd>→</kbd> accept • <kbd>Shift+Tab</kbd> new suggestion • <kbd>Esc</kbd> dismiss
       </div>
+      <button id="ragToggle" class="rag-toggle">RAG: OFF</button>
       <div class="status" id="status"></div>
     </div>
   </div>

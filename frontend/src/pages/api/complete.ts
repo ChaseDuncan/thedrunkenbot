@@ -4,7 +4,9 @@ const BACKEND_URL = import.meta.env.BACKEND_URL || 'http://localhost:8001';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const { partialLyric } = await request.json();
+    const body = await request.json();
+    const partialLyric  = body.partialLyric;
+    const useRAG = body.use_rag ?? false;
 
     if (!partialLyric || typeof partialLyric !== 'string') {
       return new Response(
@@ -14,13 +16,17 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     console.log('Calling backend:', `${BACKEND_URL}/complete`);
-    console.log('Payload:', { text: partialLyric });
+    console.log('Payload:', { text: partialLyric, use_rag: useRAG });
 
     // Forward to FastAPI backend
     const response = await fetch(`${BACKEND_URL}/complete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: partialLyric, max_tokens: 10, temperature: 1.0 }),
+      body: JSON.stringify({ 
+        text: partialLyric, 
+        use_rag: useRAG,
+        max_tokens: 10, 
+        temperature: 1.0 }),
     });
 
     console.log('Backend response status:', response.status);

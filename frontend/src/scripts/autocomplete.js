@@ -15,6 +15,18 @@ if (!editor || !suggestionEl || !statusEl) {
 let debounceTimer = null;
 let currentSuggestion = '';
 let isLoading = false;
+let useRAG = false;
+
+// RAG toggle button
+ragToggle.addEventListener('click', () => {
+  useRAG = !useRAG;
+  ragToggle.textContent = useRAG ? 'RAG: ON' : 'RAG: OFF';
+  ragToggle.classList.toggle('active', useRAG);
+  console.log('RAG toggled:', useRAG);
+  
+  // Clear current suggestion when toggling
+  clearSuggestion();
+});
 
 // Debounced autocomplete trigger
 editor.addEventListener('input', () => {
@@ -48,11 +60,14 @@ async function fetchSuggestion(partialLyric) {
 
   try {
     console.log('Fetching suggestion for:', partialLyric);
-    
+    console.log('Using RAG:', useRAG); 
+
     const response = await fetch('/api/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ partialLyric }),
+      body: JSON.stringify({ 
+        partialLyric,
+        use_rag: useRAG }),
     });
 
     console.log('Response status:', response.status);
